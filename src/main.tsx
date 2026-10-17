@@ -5,13 +5,9 @@ import type { WebPage } from '@popcomputer/web/react'
 import { createRoot } from 'react-dom/client'
 import Login from './pages/Auth/Login'
 import Register from './pages/Auth/Register'
-import Dashboard from './pages/Dashboard'
+import Canvas from './pages/Canvas'
 import ErrorPage from './pages/Errors/Error'
-import CreateProject from './pages/Projects/Create'
-import EditProject from './pages/Projects/Edit'
-import ProjectsIndex from './pages/Projects/Index'
-import PublicProject from './pages/Projects/Public'
-import ShowProject from './pages/Projects/Show'
+import Replay from './pages/Replay'
 import SessionsIndex from './pages/Sessions/Index'
 import { appTitle } from './title'
 
@@ -19,12 +15,8 @@ import { appTitle } from './title'
 const components: { readonly [Name in PageName]: WebPage<Name> } = {
   'Auth/Login': Login,
   'Auth/Register': Register,
-  Dashboard,
-  'Projects/Index': ProjectsIndex,
-  'Projects/Create': CreateProject,
-  'Projects/Show': ShowProject,
-  'Projects/Edit': EditProject,
-  'Projects/Public': PublicProject,
+  Canvas,
+  Replay,
   'Sessions/Index': SessionsIndex,
 }
 

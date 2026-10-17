@@ -4,15 +4,22 @@ import { Schema as S, Struct } from 'effect'
 import { tableSchema } from '@popcomputer/web/schema'
 import * as schema from './schema'
 
-export const ProjectSummary = tableSchema(schema.projects).mapFields(
-  Struct.pick(['id', 'name', 'description', 'visibility', 'updatedAt'])
-)
+/** A recent pixel, and who painted it: never their email or id. */
+export const RecentPaint = tableSchema(schema.paints).mapFields((fields) => ({
+  ...Struct.pick(fields, ['id', 'x', 'y', 'color', 'createdAt']),
+  name: S.String,
+}))
 
-export const Project = tableSchema(schema.projects).mapFields(
-  Struct.pick(['id', 'name', 'description', 'visibility', 'createdAt', 'updatedAt'])
-)
-
-export const PublicProject = tableSchema(schema.projects).mapFields(Struct.pick(['id', 'name', 'description', 'updatedAt']))
+/**
+ * What the live view needs to catch up: the whole canvas, the newest paint
+ * it includes, and the latest few. `GET /canvas/state` answers it as JSON.
+ */
+export const CanvasState = S.Struct({
+  canvas: S.String,
+  lastPaintId: S.Number,
+  recent: S.Array(RecentPaint),
+  leaderboard: S.Array(S.Struct({ name: S.String, pixels: S.Number })),
+})
 
 // A signed-in device: never its token, which only Better Auth reads.
 export const Session = tableSchema(schema.session).mapFields((fields) => ({
@@ -23,17 +30,12 @@ export const Session = tableSchema(schema.session).mapFields((fields) => ({
 export const pages = {
   'Auth/Login': S.Struct({}),
   'Auth/Register': S.Struct({}),
-  Dashboard: S.Struct({
-    recentProjects: S.Array(ProjectSummary),
-    projectCount: S.Number,
-    publicProjectCount: S.Number,
-    sessionCount: S.Number,
-    thisDevice: tableSchema(schema.session).mapFields(Struct.pick(['userAgent', 'createdAt'])),
+  Canvas: S.Struct({
+    ...CanvasState.fields,
+    /** The signed-in member's own count, and when they may paint next; null for a guest. */
+    you: S.NullOr(S.Struct({ painted: S.Number, nextPaintAt: S.NullOr(S.String) })),
   }),
-  'Projects/Index': S.Struct({ projects: S.Array(ProjectSummary) }),
-  'Projects/Create': S.Struct({}),
-  'Projects/Show': S.Struct({ project: Project }),
-  'Projects/Edit': S.Struct({ project: Project }),
-  'Projects/Public': S.Struct({ project: PublicProject }),
+  /** Every paint in order, as x, y, colour, x, y, colour, ... to play back. */
+  Replay: S.Struct({ paints: S.Array(S.Number), painters: S.Number }),
   'Sessions/Index': S.Struct({ sessions: S.Array(Session) }),
 }

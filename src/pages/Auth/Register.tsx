@@ -34,7 +34,7 @@ export default function Register() {
       <Head title="Create account" />
       <AuthShell
         title="Create your account"
-        description="It takes a few seconds. Everything you create stays in this demo’s database."
+        description="It takes a few seconds. Then pick a colour and add your pixel."
         alternatePrompt="Already have an account?"
         alternateHref={paths.login}
         alternateLabel="Sign in"

@@ -17,7 +17,7 @@ const tooManyAttempts = (seconds: number | undefined) =>
 export const signIn = action(
   Effect.gen(function* () {
     const input = yield* validateRequest(SignIn)
-    const redirectTo = yield* intendedUrl(paths.dashboard)
+    const redirectTo = yield* intendedUrl(paths.canvas)
 
     return yield* betterAuthRedirect('signInEmail', { body: input }, {
       redirectTo,
@@ -31,7 +31,7 @@ export const signUp = action(
     const input = yield* validateRequest(Register)
 
     return yield* betterAuthRedirect('signUpEmail', { body: input }, {
-      redirectTo: paths.dashboard,
+      redirectTo: paths.canvas,
       errors: rejected,
     })
   }).pipe(Effect.catchTag('AuthRateLimitError', (error) => tooManyAttempts(error.retryAfterSeconds)))

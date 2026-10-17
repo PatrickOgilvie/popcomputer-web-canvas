@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react'
-import { FolderKanban, Globe, MonitorSmartphone } from 'lucide-react'
+import { Clapperboard, Grid3x3, Timer } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import Brand from '~/components/Brand'
@@ -19,21 +19,19 @@ interface AuthShellProps {
 
 const tour = [
   {
-    icon: FolderKanban,
-    title: 'Projects',
-    description:
-      'Create, edit, and delete records stored in Cloudflare D1 and visible only to your account.',
+    icon: Grid3x3,
+    title: 'One shared canvas',
+    description: 'Pick a colour and paint a pixel. Everyone watching sees it appear within a couple of seconds.',
   },
   {
-    icon: Globe,
-    title: 'Public showcase',
-    description:
-      'Share a project at a public link. Making it private hides it on the very next request.',
+    icon: Timer,
+    title: 'A pixel every 10 seconds',
+    description: 'The database itself holds the cooldown, so a second tab can’t get around it.',
   },
   {
-    icon: MonitorSmartphone,
-    title: 'Signed-in devices',
-    description: 'See every device signed in to your account and sign any of them out.',
+    icon: Clapperboard,
+    title: 'A time-lapse',
+    description: 'Replay the canvas from blank, every pixel in the order it was painted.',
   },
 ] as const
 
@@ -93,7 +91,7 @@ export default function AuthShell({
       >
         <div>
           <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
-            @popcomputer/web demo
+            A @popcomputer/web example
           </p>
           <h2 id="demo-tour-title" className="mt-2 text-xl font-semibold text-balance">
             What you can try once you’re in

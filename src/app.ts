@@ -40,11 +40,9 @@ export const web = setupWeb(new Hono<Env>(), {
   ),
   database: (c) => createDb(c.env.DB),
   schema,
-  // Each record a path names, and who may load it: another member's record
-  // is the 404 a missing one is, so no action has to check.
+  // Each record a path names, and who may load it. The canvas is one record
+  // for everyone, so the only one a path names is a signed-in device.
   bindings: {
-    project: routeBinding(schema.projects, { ownedBy: 'userId' }),
-    publicProject: routeBinding(schema.projects, { publicWhen: { visibility: 'public' } }),
     session: routeBinding(schema.session, { ownedBy: 'userId' }),
   },
   pages,
@@ -65,7 +63,7 @@ export const web = setupWeb(new Hono<Env>(), {
     // declares, and Better Auth's rateLimit table for each account's failures.
     signInLimits: { limiter: 'SIGN_IN_LIMITER', table: schema.rateLimit },
     signInPath: paths.login,
-    homePath: paths.dashboard,
+    homePath: paths.canvas,
     share: tableSchema(schema.user).mapFields(Struct.pick(['id', 'name', 'email'])),
   },
   flash: S.Struct({ success: S.String }),

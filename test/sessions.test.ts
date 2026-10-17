@@ -27,7 +27,7 @@ describe('signed-in devices', () => {
     const res = await laptop.request(href(paths.session, { session: other?.id ?? '' }), send('DELETE'))
 
     expect(res.headers.get('Location')).toBe(paths.sessions)
-    expect(asksToSignIn(await phone.request(paths.dashboard))).toBe(true)
+    expect(asksToSignIn(await phone.request(paths.sessions))).toBe(true)
     expect(await sessionsOf(laptop)).toHaveLength(1)
   })
 
@@ -60,7 +60,7 @@ describe('signed-in devices', () => {
     await laptop.request(paths.otherSessions, send('DELETE'))
 
     expect(await sessionsOf(laptop)).toHaveLength(1)
-    expect(asksToSignIn(await phone.request(paths.dashboard))).toBe(true)
-    expect(asksToSignIn(await tablet.request(paths.dashboard))).toBe(true)
+    expect(asksToSignIn(await phone.request(paths.sessions))).toBe(true)
+    expect(asksToSignIn(await tablet.request(paths.sessions))).toBe(true)
   })
 })

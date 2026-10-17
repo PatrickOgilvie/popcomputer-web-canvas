@@ -1,16 +1,7 @@
 import { action, render, RequireAuthLayer, RequireGuestLayer } from '@popcomputer/web/effect'
 import { betterAuthLogoutAction } from '@popcomputer/web/auth'
 import { signIn, signUp } from './actions/auth'
-import { showDashboard } from './actions/dashboard'
-import {
-  createProject,
-  deleteProject,
-  editProject,
-  listProjects,
-  showProject,
-  showPublicProject,
-  updateProject,
-} from './actions/projects'
+import { canvasState, paint, showCanvas, showReplay } from './actions/canvas'
 import { listSessions, revokeOtherSessions, revokeSession } from './actions/sessions'
 import { routes } from './app'
 import { paths } from './paths'
@@ -24,19 +15,15 @@ routes
 
 routes.post(paths.logout, betterAuthLogoutAction({ redirectTo: paths.login }))
 
-// Anyone may see a project its owner made public.
-routes.get(paths.publicProject, showPublicProject)
+// Anyone may watch the canvas and its replay; painting takes an account.
+routes
+  .get(paths.canvas, showCanvas)
+  .get(paths.canvasState, canvasState)
+  .get(paths.replay, showReplay)
 
 routes
   .provide(RequireAuthLayer)
-  .get(paths.dashboard, showDashboard)
-  .get(paths.projects, listProjects)
-  .get(paths.newProject, action(render('Projects/Create')))
-  .post(paths.projects, createProject, { form: paths.newProject })
-  .get(paths.project, showProject)
-  .get(paths.editProject, editProject)
-  .put(paths.project, updateProject, { form: paths.editProject })
-  .delete(paths.project, deleteProject)
+  .post(paths.pixels, paint, { form: paths.canvas })
   .get(paths.sessions, listSessions)
   .delete(paths.otherSessions, revokeOtherSessions)
   .delete(paths.session, revokeSession, { form: paths.sessions })

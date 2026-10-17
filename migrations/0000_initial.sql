@@ -1,18 +1,31 @@
-CREATE TABLE `projects` (
-	`id` text PRIMARY KEY NOT NULL,
+CREATE TABLE `paints` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`user_id` text NOT NULL,
-	`name` text NOT NULL,
-	`description` text,
-	`visibility` text DEFAULT 'private' NOT NULL,
+	`x` integer NOT NULL,
+	`y` integer NOT NULL,
+	`color` integer NOT NULL,
 	`created_at` integer NOT NULL,
-	`updated_at` integer NOT NULL,
 	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "projects_name_length" CHECK(length("projects"."name") BETWEEN 1 AND 100),
-	CONSTRAINT "projects_description_length" CHECK("projects"."description" IS NULL OR length("projects"."description") <= 500),
-	CONSTRAINT "projects_visibility" CHECK("projects"."visibility" IN ('private', 'public'))
+	CONSTRAINT "paints_x" CHECK("paints"."x" BETWEEN 0 AND 63),
+	CONSTRAINT "paints_y" CHECK("paints"."y" BETWEEN 0 AND 63),
+	CONSTRAINT "paints_color" CHECK("paints"."color" BETWEEN 0 AND 15)
 );
 --> statement-breakpoint
-CREATE INDEX `projects_user_updated_idx` ON `projects` (`user_id`,`updated_at`);--> statement-breakpoint
+CREATE INDEX `paints_user_created_idx` ON `paints` (`user_id`,`created_at`);--> statement-breakpoint
+CREATE TABLE `pixels` (
+	`x` integer NOT NULL,
+	`y` integer NOT NULL,
+	`color` integer NOT NULL,
+	`user_id` text,
+	`painted_at` integer NOT NULL,
+	PRIMARY KEY(`x`, `y`),
+	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null,
+	CONSTRAINT "pixels_x" CHECK("pixels"."x" BETWEEN 0 AND 63),
+	CONSTRAINT "pixels_y" CHECK("pixels"."y" BETWEEN 0 AND 63),
+	CONSTRAINT "pixels_color" CHECK("pixels"."color" BETWEEN 0 AND 15)
+);
+--> statement-breakpoint
+CREATE INDEX `pixels_user_idx` ON `pixels` (`user_id`);--> statement-breakpoint
 CREATE TABLE `account` (
 	`id` text PRIMARY KEY NOT NULL,
 	`account_id` text NOT NULL,

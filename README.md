@@ -1,35 +1,29 @@
 <img src="src/assets/popcomputer.png" alt="Popcomputer" width="374" height="69">
 
-# @popcomputer/web demo
+# A shared pixel canvas on @popcomputer/web
 
-A complete application on @popcomputer/web, to start yours from.
+An example application made from the
+[template](https://github.com/PatrickOgilvie/popcomputer-web-demo): one 64 by
+64 canvas everyone shares. Anyone can watch it change live; members paint one
+pixel every 10 seconds, and a replay plays its whole history back.
 
 React pages served by Inertia from a Cloudflare Worker, with Effect actions,
 D1 and Better Auth, built on
 [@popcomputer/web](https://github.com/PatrickOgilvie/popcomputer-web). Its
 [README](https://github.com/PatrickOgilvie/popcomputer-web#readme) explains
-each part; this repository shows them working together. Use it as a
-template, or deploy it as it is.
-
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/PatrickOgilvie/popcomputer-web-demo)
+each part; this repository shows them working together.
 
 ```ts
-// src/actions/projects.ts
-export const updateProject = action(
+// src/actions/canvas.ts: the live view's poll
+export const canvasState = action(
   Effect.gen(function* () {
-    // Only its owner's: the binding is ownedBy 'userId', so another member's is a 404.
-    const project = yield* bound('project')
-    const input = yield* validateRequest(ProjectForm)
-    const updatedAt = DateTime.toDateUtc(yield* DateTime.now)
+    const lastPaintId = yield* latestPaintId
 
-    yield* dbMutation((db) =>
-      db.update(projects)
-        .set({ ...input, updatedAt })
-        .where(and(eq(projects.id, project.id), eq(projects.userId, project.userId)))
-    )
-    yield* flash('success', 'Project saved.')
-
-    return yield* redirect(paths.project, { project: project.id })
+    // A poll that already has this version gets a 304, after one indexed read.
+    return yield* ifChanged(`canvas-${lastPaintId}`, Effect.gen(function* () {
+      const state = yield* readState
+      return yield* json(CanvasState, { ...state, lastPaintId })
+    }))
   })
 )
 ```
@@ -42,50 +36,61 @@ export const updateProject = action(
 
 ## What it does
 
-- **Accounts.** Register, sign in and sign out through Better Auth. Attempts
-  are limited per address by Cloudflare's Rate Limiting binding and per
-  account in D1, and a daily cron clears the counts.
-- **Projects.** Create, edit and delete projects only their owner can see.
-  Another member's project is the same 404 as a missing one.
-- **A public page.** Anyone can read a project its owner made public, at
-  `/showcase/projects/{id}`, until the next request after it is made private.
-- **Signed-in devices.** List the devices signed in to the account, and sign
-  any other one, or all of them, out.
+- **One canvas, for everyone.** Anyone can watch it, signed in or not. It
+  stays live: the page asks for changes every two seconds while it's in view.
+- **A pixel at a time.** Members pick one of 16 colours and paint a pixel
+  with a click, a tap (one to pick, a second to paint) or the keyboard (the
+  arrow keys move a cursor, Enter paints). Each member waits 10 seconds
+  between pixels.
+- **A leaderboard and a feed.** Who holds the most of the canvas now, and
+  the latest pixels painted.
+- **A replay.** Every pixel in the order it was painted, from a blank
+  canvas, at 1×, 2× or 4×, with a slider to scrub through it.
+- **Accounts and signed-in devices**, as the template has them.
 
-Each page past sign-in, and the public project page, ends with an "Under the
-hood" panel naming the action that answers it and what the framework
-guarantees there.
+The canvas page ends with an "Under the hood" panel naming the action that
+answers it and what the framework guarantees there.
 
 ## How it's built
 
-- **Every name is declared once, and the rest derives from it.** A renamed
-  column, prop or path placeholder is a type error wherever it is used:
+- **The cooldown is the database's.** A trigger in
+  `migrations/0001_paint_cooldown.sql` refuses a member's paint within 10
+  seconds of their last, so two tabs, or two hundred requests at once, still
+  get one pixel. The paint action shows the refusal by its name:
+
+  ```ts
+  // src/actions/canvas.ts
+  yield* dbBatch((db) => [
+    db.insert(paints).values({ ...input, userId: auth.user.id, createdAt: now }),
+    db.insert(pixels).values({ ...input, userId: auth.user.id, paintedAt: now })
+      .onConflictDoUpdate({ target: [pixels.x, pixels.y], set: { color: input.color, userId: auth.user.id, paintedAt: now } }),
+  ]).pipe(constraintFieldErrors({ paints_cooldown: { pixel: 'One pixel every 10 seconds: ...' } }))
+  ```
+
+  The paint and the canvas change in one batch, so the trigger undoes both.
+  The trigger compares the rows' own times, which the action takes from
+  Effect's clock, so a test moves it with `testClock`.
+
+- **Live, cheaply.** `GET /canvas/state` answers the canvas as JSON with its
+  version, the newest paint's id, as an `ETag`. The page sends it back as
+  `If-None-Match`, and `ifChanged` answers 304 without reading the canvas
+  until someone paints.
+
+- **The whole canvas is one string**, a hex digit per pixel: 4,096
+  characters, small enough to send on every change, and drawn onto a 64 by
+  64 `<canvas>` scaled up with crisp pixels (`src/canvas.ts`).
+
+- **Every name is declared once, and the rest derives from it:**
 
   | File | Declares |
   | --- | --- |
+  | `src/canvas.ts` | The canvas's size, the cooldown and the palette, shared by the server and the pages. |
   | `src/paths.ts` | Every URL. Actions redirect to them and React links to them with `href`. |
-  | `src/schema.ts` | The D1 tables, with their limits as `CHECK` constraints. |
-  | `src/forms.ts` | The schemas forms are validated with, which type the forms in React too. |
-  | `src/pages.ts` | Each page's props, taken from the tables' columns. A column a page doesn't name never reaches the browser. |
-  | `src/env.ts` | The Worker's vars and secrets, with their schemas. The Worker, `bun run dev`, `bun run env:check` and `bun run deploy` check them. |
+  | `src/schema.ts` | The D1 tables: every paint in order, and the canvas as it is now. |
+  | `src/forms.ts` | The paint form's schema: a pixel on the canvas, a colour in the palette. |
+  | `src/pages.ts` | Each page's props, and the live view's JSON. |
   | `src/app.ts` | `setupWeb`: rendering, D1, Better Auth, route model binding, flash messages and the error page. |
   | `src/routes.ts` | Every route and the action that answers it. |
-
-- **An action reads its record from the URL** rather than querying for it,
-  and its binding says who may load it, so no action checks: another
-  member's project is the 404 a missing one is, from the lookup's own query.
-
-  ```ts
-  // src/app.ts
-  bindings: {
-    project: routeBinding(schema.projects, { ownedBy: 'userId' }),
-    publicProject: routeBinding(schema.projects, { publicWhen: { visibility: 'public' } }),
-    session: routeBinding(schema.session, { ownedBy: 'userId' }),
-  },
-  ```
-
-- **A failed form goes back to its page** with its errors beside the fields,
-  and the page keeps everything it showed.
 
 The rest of the tree:
 
@@ -261,9 +266,10 @@ bun run db:seed
 ```
 
 It deletes everything in the local database, applies the migrations to a
-new one, then runs `src/seed.ts`. The template's seed creates a member to
-sign in as, `ada@example.com` with the password `at least twelve characters`,
-with a private project and a public one. A seed exports a function that
+new one, then runs `src/seed.ts`. Its seed creates a member to sign in as,
+`ada@example.com` with the password `at least twelve characters`, and two
+more painters (`grace@example.com` and `alan@example.com`, with the same
+password) who painted a picture together, a pixel at a time. A seed exports a function that
 takes the database and the Worker's bindings, and inserts with Drizzle, so
 `bun run check` reports a seed a schema change has broken:
 
@@ -274,7 +280,7 @@ export async function seed(db: Database, env: Bindings): Promise<void> {
   const auth = createAuth({ db, secret: env.BETTER_AUTH_SECRET, baseURL: 'http://localhost' })
   const { user } = await auth.api.signUpEmail({ body: { ...seedMember } })
 
-  await db.insert(projects).values([{ userId: user.id, name: 'Apollo' }])
+  await db.insert(paints).values({ userId: user.id, x: 12, y: 40, color: 5 })
 }
 ```
 
@@ -427,7 +433,7 @@ It builds the app, uploads it as a version that takes none of the live
 app's requests, checks it answers, and prints its address, such as
 `https://1a2b3c4d-my-app.my-subdomain.workers.dev`. `bun run deploy` makes
 the same code live. A preview runs on the live app's database and secrets:
-what someone does there, signing up or editing a project, they do to the
+what someone does there, signing up or painting a pixel, they do to the
 live app's data. It never applies migrations, so it says when the database
 on Cloudflare hasn't had one yet: pages that need it fail on the preview
 until a deploy applies it. The app has to be deployed once first, and it

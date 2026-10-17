@@ -4,13 +4,12 @@ import { paths } from '../src/paths'
 import { app, asksToSignIn, freshEnv, password, register, send, visit } from './app'
 
 describe('registering', () => {
-  test('signs the new member in and opens their dashboard', async () => {
+  test('signs the new member in and opens the canvas, ready to paint', async () => {
     const browser = await register(await freshEnv(), 'Ada')
-    const dashboard = await readPage(await browser.request(paths.dashboard, visit), 'Dashboard')
+    const canvas = await readPage(await browser.request(paths.canvas, visit), 'Canvas')
 
-    expect(dashboard.props.auth.user?.email).toBe('ada@example.com')
-    expect(dashboard.props.projectCount).toBe(0)
-    expect(dashboard.props.sessionCount).toBe(1)
+    expect(canvas.props.auth.user?.email).toBe('ada@example.com')
+    expect(canvas.props.you).toEqual({ painted: 0, nextPaintAt: null })
   })
 
   test('refuses a short password beside its field', async () => {
@@ -50,14 +49,14 @@ describe('signing in', () => {
     await register(env, 'Ada')
     const browser = testBrowser(app, env)
 
-    const asked = await browser.request(paths.projects)
+    const asked = await browser.request(paths.sessions)
 
-    expect(asked.headers.get('Location')).toBe('/login?redirect=%2Fprojects')
+    expect(asked.headers.get('Location')).toBe('/login?redirect=%2Fsessions')
     await readPage(await browser.follow(asked), 'Auth/Login')
 
     const res = await browser.request(paths.login, send('POST', { email: 'ada@example.com', password }))
 
-    expect(res.headers.get('Location')).toBe(paths.projects)
+    expect(res.headers.get('Location')).toBe(paths.sessions)
   })
 })
 
@@ -67,6 +66,6 @@ describe('signing out', () => {
     const res = await browser.request(paths.logout, send('POST'))
 
     expect(res.headers.get('Location')).toBe(paths.login)
-    expect(asksToSignIn(await browser.request(paths.dashboard))).toBe(true)
+    expect(asksToSignIn(await browser.request(paths.sessions))).toBe(true)
   })
 })

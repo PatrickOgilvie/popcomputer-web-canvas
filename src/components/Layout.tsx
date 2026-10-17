@@ -12,9 +12,8 @@ interface LayoutProps {
 }
 
 const primaryNavigation = [
-  { label: 'Dashboard', href: paths.dashboard },
-  { label: 'Projects', href: paths.projects },
-  { label: 'Sessions', href: paths.sessions },
+  { label: 'Canvas', href: paths.canvas },
+  { label: 'Replay', href: paths.replay },
 ] as const
 
 function isActivePath(currentPath: string, href: string): boolean {
@@ -73,9 +72,8 @@ export default function Layout({ children }: LayoutProps) {
       <header className="sticky top-0 z-10 border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4 sm:px-6 lg:px-8">
           <Brand />
-          {user ? (
-            <PrimaryNavigation currentPath={currentPath} className="hidden sm:block" />
-          ) : null}
+          {/* The canvas and its replay are public, so guests get the navigation too. */}
+          <PrimaryNavigation currentPath={currentPath} className="hidden sm:block" />
           <div className="ml-auto flex items-center gap-2">
             {user ? (
               <AccountMenu displayName={displayName} email={user.email} />
@@ -94,12 +92,10 @@ export default function Layout({ children }: LayoutProps) {
             )}
           </div>
         </div>
-        {user ? (
-          <PrimaryNavigation
-            currentPath={currentPath}
-            className="border-t border-zinc-200 px-4 py-2 sm:hidden dark:border-zinc-800"
-          />
-        ) : null}
+        <PrimaryNavigation
+          currentPath={currentPath}
+          className="border-t border-zinc-200 px-4 py-2 sm:hidden dark:border-zinc-800"
+        />
       </header>
 
       <span className="sr-only" aria-live="polite" aria-atomic="true">

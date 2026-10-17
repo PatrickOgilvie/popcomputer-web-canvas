@@ -78,8 +78,8 @@ const ErrorPage: WebErrorPage = ({ status, message, hint, auth }) => {
           ) : null}
 
           <div className="mt-8 flex flex-wrap gap-2">
-            <Link href={needsSignIn ? paths.login : paths.dashboard} className={buttonClassName()}>
-              {needsSignIn ? 'Sign in' : 'Back to dashboard'}
+            <Link href={needsSignIn ? paths.login : paths.canvas} className={buttonClassName()}>
+              {needsSignIn ? 'Sign in' : 'Back to the canvas'}
             </Link>
             <button
               type="button"
