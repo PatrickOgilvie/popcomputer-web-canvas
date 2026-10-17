@@ -7,6 +7,8 @@ An example application made from the
 64 canvas everyone shares. Anyone can watch it change live; members paint one
 pixel every 10 seconds, and a replay plays its whole history back.
 
+**Live at [canvas.web.popcomputer.com](https://canvas.web.popcomputer.com).** Anyone can watch; sign up to paint.
+
 React pages served by Inertia from a Cloudflare Worker, with Effect actions,
 D1 and Better Auth, built on
 [@popcomputer/web](https://github.com/PatrickOgilvie/popcomputer-web). Its
@@ -472,6 +474,10 @@ deploy's check, don't show in `bun run logs`.
 Better Auth takes its origin from each request, so the Worker works on
 `workers.dev`, at its Version URLs and on any custom domain routed to it,
 with nothing more to configure.
+
+This repository's `wrangler.jsonc` routes the Worker to `canvas.web.popcomputer.com`, on
+popcomputer.com's Cloudflare zone. To deploy a copy of your own, remove its
+`routes`, or name a domain on your own account.
 
 ## Deploying from GitHub
 
