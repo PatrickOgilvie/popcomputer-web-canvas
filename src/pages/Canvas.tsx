@@ -296,9 +296,9 @@ const CanvasPage: WebPage<'Canvas'> = (props) => {
                   {state.recent.map((recent) => (
                     <li key={recent.id} className="flex items-center gap-2.5 px-4 py-2 text-sm">
                       <Swatch color={recent.color} className="size-4" />
-                      <span className="min-w-0 flex-1 truncate">
-                        <span className="font-medium">{recent.name}</span>{' '}
-                        <span className="font-mono text-xs text-zinc-500 tabular-nums dark:text-zinc-400">
+                      <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
+                        <span className="truncate font-medium">{recent.name}</span>
+                        <span className="shrink-0 font-mono text-xs text-zinc-500 tabular-nums dark:text-zinc-400">
                           {recent.x}, {recent.y}
                         </span>
                       </span>
