@@ -6,9 +6,5 @@ export const paths = {
   canvasState: '/canvas/state',
   replay: '/replay',
   login: '/login',
-  register: '/register',
   logout: '/logout',
-  sessions: '/sessions',
-  otherSessions: '/sessions/others',
-  session: '/sessions/{session}',
 } as const

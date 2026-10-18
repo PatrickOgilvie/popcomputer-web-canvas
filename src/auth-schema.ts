@@ -13,6 +13,8 @@ export const user = sqliteTable('user', {
   image: text('image'),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
+  /** A guest who joined in to paint: Better Auth's anonymous plugin sets it. */
+  isAnonymous: integer('is_anonymous', { mode: 'boolean' }).notNull().default(false),
 })
 
 export const session = sqliteTable(

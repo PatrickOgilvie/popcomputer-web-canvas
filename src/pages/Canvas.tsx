@@ -135,6 +135,7 @@ const CanvasPage: WebPage<'Canvas'> = (props) => {
   const [zoom, setZoom] = useState(1)
   const [cursor, setCursor] = useState<Cell | null>(null)
   const [pending, setPending] = useState<(Cell & { color: number }) | null>(null)
+  const [joining, setJoining] = useState(false)
   const waiting = useSecondsUntil(props.you?.nextPaintAt ?? null)
   const signedIn = props.you !== null
   const canPaint = signedIn && waiting === 0 && pending === null
@@ -200,18 +201,28 @@ const CanvasPage: WebPage<'Canvas'> = (props) => {
               ) : (
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm text-pretty text-zinc-600 dark:text-zinc-400">
-                    You’re watching live. Sign in to add pixels of your own.
+                    You’re watching live. Join in to paint: one click gives you a name to paint under, with nothing to
+                    fill in.
                   </p>
-                  <div className="flex shrink-0 gap-2">
-                    <Link href={paths.login} className={buttonClassName({ variant: 'secondary', size: 'sm' })}>
-                      Sign in
-                    </Link>
-                    <Link href={paths.register} className={buttonClassName({ size: 'sm' })}>
-                      Create account
-                    </Link>
-                  </div>
+                  <button
+                    type="button"
+                    disabled={joining}
+                    aria-busy={joining}
+                    className={buttonClassName({ size: 'sm', className: 'shrink-0' })}
+                    onClick={() =>
+                      router.post(paths.login, {}, { onStart: () => setJoining(true), onFinish: () => setJoining(false) })
+                    }
+                  >
+                    <Paintbrush aria-hidden="true" />
+                    {joining ? 'Joining…' : 'Join in to paint'}
+                  </button>
                 </div>
               )}
+              {typeof errors.form === 'string' ? (
+                <p role="alert" className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
+                  {errors.form}
+                </p>
+              ) : null}
               {typeof errors.pixel === 'string' ? (
                 <p role="alert" className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
                   {errors.pixel}

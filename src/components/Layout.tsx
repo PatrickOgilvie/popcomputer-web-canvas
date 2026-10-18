@@ -76,19 +76,11 @@ export default function Layout({ children }: LayoutProps) {
           <PrimaryNavigation currentPath={currentPath} className="hidden sm:block" />
           <div className="ml-auto flex items-center gap-2">
             {user ? (
-              <AccountMenu displayName={displayName} email={user.email} />
+              <AccountMenu displayName={displayName} email={user.isAnonymous ? 'Guest painter' : user.email} />
             ) : (
-              <>
-                <Link href={paths.login} className={buttonClassName({ variant: 'ghost', size: 'sm' })}>
-                  Sign in
-                </Link>
-                <Link
-                  href={paths.register}
-                  className={buttonClassName({ size: 'sm', className: 'hidden sm:inline-flex' })}
-                >
-                  Create account
-                </Link>
-              </>
+              <Link href={paths.login} className={buttonClassName({ size: 'sm' })}>
+                Join in to paint
+              </Link>
             )}
           </div>
         </div>

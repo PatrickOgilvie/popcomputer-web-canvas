@@ -2,7 +2,6 @@ import { Hono } from 'hono'
 import { Schema as S, Struct } from 'effect'
 import { createTemplate, createVersion, setupWeb, vite } from '@popcomputer/web'
 import { betterAuthSession } from '@popcomputer/web/auth'
-import { routeBinding } from '@popcomputer/web/effect'
 import { tableSchema } from '@popcomputer/web/schema'
 import manifest from '../dist/client/manifest.json'
 import { createAuth } from './auth'
@@ -40,11 +39,6 @@ export const web = setupWeb(new Hono<Env>(), {
   ),
   database: (c) => createDb(c.env.DB),
   schema,
-  // Each record a path names, and who may load it. The canvas is one record
-  // for everyone, so the only one a path names is a signed-in device.
-  bindings: {
-    session: routeBinding(schema.session, { ownedBy: 'userId' }),
-  },
   pages,
   paths,
   auth: {
@@ -64,7 +58,7 @@ export const web = setupWeb(new Hono<Env>(), {
     signInLimits: { limiter: 'SIGN_IN_LIMITER', table: schema.rateLimit },
     signInPath: paths.login,
     homePath: paths.canvas,
-    share: tableSchema(schema.user).mapFields(Struct.pick(['id', 'name', 'email'])),
+    share: tableSchema(schema.user).mapFields(Struct.pick(['id', 'name', 'email', 'isAnonymous'])),
   },
   flash: S.Struct({ success: S.String }),
   errors: { component: 'Errors/Error' },

@@ -1,38 +1,19 @@
 import { Effect } from 'effect'
-import { action, intendedUrl, invalid, validateRequest } from '@popcomputer/web/effect'
-import { betterAuthRedirect, type BetterAuthActionError } from '@popcomputer/web/auth'
-import { Register, SignIn } from '../forms'
+import { action, intendedUrl, invalid } from '@popcomputer/web/effect'
+import { betterAuthRedirect } from '@popcomputer/web/auth'
 import { paths } from '../paths'
 
-// Better Auth turns away a form without the Origin header every browser sends,
-// so only a script such as curl meets these, and its email isn't to blame.
-const rejected = (error: BetterAuthActionError) =>
-  error.code?.endsWith('ORIGIN') === true
-    ? { form: `${error.message}: send the app's address as the Origin header, as a browser does.` }
-    : { email: error.message }
-
-const tooManyAttempts = (seconds: number | undefined) =>
-  invalid({ email: `Too many attempts. Try again in ${seconds ?? 60} seconds.` })
-
-export const signIn = action(
+/**
+ * Joins in: signs the visitor in as a guest of their own, through Better
+ * Auth's anonymous plugin, and sends them back to the canvas. A guest is a
+ * sign-in like any other, so the sign-in limits count it by address.
+ */
+export const joinIn = action(
   Effect.gen(function* () {
-    const input = yield* validateRequest(SignIn)
-    const redirectTo = yield* intendedUrl(paths.canvas)
-
-    return yield* betterAuthRedirect('signInEmail', { body: input }, {
-      redirectTo,
-      errors: rejected,
-    })
-  }).pipe(Effect.catchTag('AuthRateLimitError', (error) => tooManyAttempts(error.retryAfterSeconds)))
-)
-
-export const signUp = action(
-  Effect.gen(function* () {
-    const input = yield* validateRequest(Register)
-
-    return yield* betterAuthRedirect('signUpEmail', { body: input }, {
-      redirectTo: paths.canvas,
-      errors: rejected,
-    })
-  }).pipe(Effect.catchTag('AuthRateLimitError', (error) => tooManyAttempts(error.retryAfterSeconds)))
+    return yield* betterAuthRedirect('signInAnonymous', {}, { redirectTo: yield* intendedUrl(paths.canvas) })
+  }).pipe(
+    Effect.catchTag('AuthRateLimitError', (error) =>
+      invalid({ form: `Lots of painters have joined from here just now. Try again in ${error.retryAfterSeconds ?? 60} seconds.` })
+    )
+  )
 )

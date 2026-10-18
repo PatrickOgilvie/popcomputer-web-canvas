@@ -15,6 +15,13 @@
       "when": 1792277072785,
       "tag": "0001_paint_cooldown",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792338437013,
+      "tag": "0002_guests",
+      "breakpoints": true
     }
   ]
 }

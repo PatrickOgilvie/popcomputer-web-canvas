@@ -21,15 +21,8 @@ export const CanvasState = S.Struct({
   leaderboard: S.Array(S.Struct({ name: S.String, pixels: S.Number })),
 })
 
-// A signed-in device: never its token, which only Better Auth reads.
-export const Session = tableSchema(schema.session).mapFields((fields) => ({
-  ...Struct.pick(fields, ['id', 'ipAddress', 'userAgent', 'createdAt', 'updatedAt', 'expiresAt']),
-  current: S.Boolean,
-}))
-
 export const pages = {
   'Auth/Login': S.Struct({}),
-  'Auth/Register': S.Struct({}),
   Canvas: S.Struct({
     ...CanvasState.fields,
     /** The signed-in member's own count, and when they may paint next; null for a guest. */
@@ -37,5 +30,4 @@ export const pages = {
   }),
   /** Every paint in order, as x, y, colour, x, y, colour, ... to play back. */
   Replay: S.Struct({ paints: S.Array(S.Number), painters: S.Number }),
-  'Sessions/Index': S.Struct({ sessions: S.Array(Session) }),
 }

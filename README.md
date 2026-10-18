@@ -7,7 +7,7 @@ An example application made from the
 64 canvas everyone shares. Anyone can watch it change live; members paint one
 pixel every 10 seconds, and a replay plays its whole history back.
 
-**Live at [canvas.web.popcomputer.com](https://canvas.web.popcomputer.com).** Anyone can watch; sign up to paint.
+**Live at [canvas.web.popcomputer.com](https://canvas.web.popcomputer.com).** Anyone can watch; Join in to paint, as a guest with a name of your own and nothing to fill in.
 
 React pages served by Inertia from a Cloudflare Worker, with Effect actions,
 D1 and Better Auth, built on
@@ -48,7 +48,10 @@ export const canvasState = action(
   the latest pixels painted.
 - **A replay.** Every pixel in the order it was painted, from a blank
   canvas, at 1×, 2× or 4×, with a slider to scrub through it.
-- **Accounts and signed-in devices**, as the template has them.
+- **Guests, not accounts.** Join in signs a visitor in as a guest painter,
+  through Better Auth's anonymous plugin, with a name such as Curious Otter
+  and a cooldown of their own. Nobody registers, and there's no password.
+  Guests stay, as their pixels do.
 
 The canvas page ends with an "Under the hood" panel naming the action that
 answers it and what the framework guarantees there.
@@ -182,38 +185,19 @@ the id.
 If the address shows portless's "404 - Not Found" page, the app isn't running:
 start it with `bun run dev`, whatever command that page suggests.
 
-To try a form from a terminal, post its fields with curl, which the app
-answers as a command-line client: a form that fails validation gets a 422
-with the errors as JSON, and a sign-up or sign-in a 303 to `/` with its
-session cookie, which curl keeps in `cookies.txt` (git ignores it). Send the
-`Origin` a browser would: Better Auth refuses a sign-up or sign-in without
-one, here as in production. Put your app's name in place of `my-app`. The
-example signs up `sam@example.com`, since `bun run db:seed` creates
-`ada@example.com`.
+To start the demo from a terminal, post to `/login` with curl, which the
+app answers as a command-line client: a 303 with the guest's session cookie,
+which curl keeps in `cookies.txt` (git ignores it). Send the `Origin` a
+browser would: Better Auth refuses a sign-in without one, here as in
+production. Put your app's name in place of `my-app`.
 
 ```bash
-curl -isS https://my-app.localhost/register -c cookies.txt \
-  -H 'Origin: https://my-app.localhost' \
-  --data-urlencode 'name=Sam' --data-urlencode 'email=sam@example.com' \
-  --data-urlencode 'password=at least twelve characters'
+curl -isS -X POST https://my-app.localhost/login -c cookies.txt \
+  -H 'Origin: https://my-app.localhost'
 curl -sS -b cookies.txt https://my-app.localhost/
 ```
 
-Signed in, the second command prints the dashboard's HTML page, with your name
-in the page data it carries; signed out, it prints the JSON 401. A browser that
-isn't signed in is sent from `/` to the sign-in page, which a browser's headers
-show: `curl -isS -A Mozilla/5.0 -H 'Accept: text/html' https://my-app.localhost/`
-answers 302 with `location: /login?redirect=%2F`.
-
-Signing in posts the email and password to `/login` the same way; a wrong
-password gets a 422.
-
-```bash
-curl -isS https://my-app.localhost/login -c cookies.txt \
-  -H 'Origin: https://my-app.localhost' \
-  --data-urlencode 'email=sam@example.com' \
-  --data-urlencode 'password=at least twelve characters'
-```
+Signed in, the second command prints the canvas's HTML page, with `you` in the page data it carries, ready to paint; signed out, it prints the canvas for a visitor watching.
 
 Without the portless service, `bun run dev` asks for your password the first
 time it runs, and again after a restart. `PORTLESS=0 bun run dev` skips
@@ -268,21 +252,16 @@ bun run db:seed
 ```
 
 It deletes everything in the local database, applies the migrations to a
-new one, then runs `src/seed.ts`. Its seed creates a member to sign in as,
-`ada@example.com` with the password `at least twelve characters`, and two
-more painters (`grace@example.com` and `alan@example.com`, with the same
-password) who painted a picture together, a pixel at a time. A seed exports a function that
+new one, then runs `src/seed.ts`, whose painters, Ada, Grace and Alan,
+paint a picture together, a pixel at a time. They have no way to sign in:
+visitors join in as guests of their own. A seed exports a function that
 takes the database and the Worker's bindings, and inserts with Drizzle, so
 `bun run check` reports a seed a schema change has broken:
 
 ```ts
 // src/seed.ts
-export async function seed(db: Database, env: Bindings): Promise<void> {
-  // Through Better Auth, as the sign-up form does, so the password signs in.
-  const auth = createAuth({ db, secret: env.BETTER_AUTH_SECRET, baseURL: 'http://localhost' })
-  const { user } = await auth.api.signUpEmail({ body: { ...seedMember } })
-
-  await db.insert(paints).values({ userId: user.id, x: 12, y: 40, color: 5 })
+export async function seed(db: Database): Promise<void> {
+  await db.insert(user).values({ id: 'seed-sam', name: 'Sam', email: 'sam@example.invalid', emailVerified: false })
 }
 ```
 
