@@ -164,6 +164,23 @@ describe('joining in', () => {
     expect((await testBrowser(app, env).request('/register', visit)).status).toBe(404)
   })
 
+  test("Better Auth's address is APP_URL's, whatever host the visitor joined in at", async () => {
+    // A Version URL `bun run preview` shares, on https, while the tests' APP_URL is http://localhost.
+    const versionUrl = 'https://4f2a9c1e-popcomputer-web-canvas.example.workers.dev'
+    const res = await app.request(
+      `${versionUrl}${paths.login}`,
+      { method: 'POST', headers: { 'X-Inertia': 'true', 'Content-Type': 'application/json', Origin: versionUrl }, body: '{}' },
+      await freshEnv()
+    )
+    const session = res.headers.getSetCookie().find((cookie) => cookie.includes('session_token='))
+
+    expect(res.headers.get('Location')).toBe(paths.canvas)
+    // Better Auth names and secures its cookies by its baseURL's scheme: the
+    // request's would name this __Secure-better-auth.session_token.
+    expect(session).toStartWith('better-auth.session_token=')
+    expect(session).not.toContain('Secure')
+  })
+
   test('each guest paints under their own name, with a cooldown of their own', async () => {
     const env = await freshEnv()
     const first = await joinIn(env)

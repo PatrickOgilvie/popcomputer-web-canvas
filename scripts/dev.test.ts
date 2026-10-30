@@ -14,6 +14,7 @@ import {
   describeLocalMigrations,
   createOutputFilter,
   createViteArguments,
+  devServerVars,
   devVarsProblem,
   DIRECT_PORT,
   ensureDevVars,
@@ -38,6 +39,13 @@ describe('development session', () => {
     const session = readDevSession({ PORT: '4999', PORTLESS_URL: 'http://fix-ui.reading-list.localhost:1355' })
 
     expect(session.appOrigin).toBe('http://fix-ui.reading-list.localhost:1355')
+  })
+
+  test("gives the Worker the address it's served at as APP_URL, not the live app's", () => {
+    expect(devServerVars(readDevSession({ PORT: '4123', PORTLESS_URL: 'https://reading-list.localhost' }))).toEqual({
+      APP_URL: 'https://reading-list.localhost',
+    })
+    expect(devServerVars(readDevSession({}))).toEqual({ APP_URL: `http://localhost:${DIRECT_PORT}` })
   })
 
   test('falls back to one fixed port when portless is bypassed', () => {

@@ -165,7 +165,8 @@ Vite plugin running the Worker inside it, so the pages and their scripts share
 one address, and an edit shows in the browser as you save it: an edit to an
 action or to `src/routes.ts` runs the Worker's modules afresh, through
 `reloadWorkerModules()` from `@popcomputer/web/vite` in `vite.config.ts`, so
-no route registers twice. Portless gives
+no route registers twice. It gives the Worker the address it serves the app
+at as `APP_URL`. Portless gives
 that address the app's name instead of a port. If Node.js is missing, it says
 so and stops. Once Vite is ready it says which address to open. Stop the app
 with Ctrl-C, or, when it runs in another terminal or in the background, with
@@ -300,8 +301,9 @@ with the id in brackets.
 `src/env.ts` declares each var and secret the Worker reads, once, with an
 Effect schema for its value. The Worker checks its own against it before it
 serves: a missing or invalid one fails every request, and its log names which.
-The commands below check them before that can happen. The template has two:
-`BETTER_AUTH_SECRET`, which signs sessions, and `ENVIRONMENT`.
+The commands below check them before that can happen. The app has three:
+`BETTER_AUTH_SECRET`, which signs sessions, `APP_URL`, the app's address,
+which is Better Auth's `baseURL`, and `ENVIRONMENT`.
 
 A secret, such as another service's API key, is declared with `secret(...)`.
 A secret nobody has to choose, such as `BETTER_AUTH_SECRET`, has a
@@ -453,13 +455,15 @@ code, not the database: migrations stay applied, so the older code has to work
 with the newer tables. Requests to a Version URL, from `bun run preview` or a
 deploy's check, don't show in `bun run logs`.
 
-Better Auth takes its origin from each request, so the Worker works on
-`workers.dev`, at its Version URLs and on any custom domain routed to it,
-with nothing more to configure.
+Better Auth takes its address from `APP_URL`, in `wrangler.jsonc`'s `vars`,
+never from the host a request arrived on; guests still join in at
+`workers.dev`, at Version URLs and on any custom domain routed to the Worker.
 
 This repository's `wrangler.jsonc` routes the Worker to `canvas.web.popcomputer.com`, on
-popcomputer.com's Cloudflare zone. To deploy a copy of your own, remove its
-`routes`, or name a domain on your own account.
+popcomputer.com's Cloudflare zone, and names it as `APP_URL`. To deploy a copy
+of your own, remove its `routes`, or name a domain on your own account, and
+set `APP_URL` to the address the copy is served at, such as its `workers.dev`
+address.
 
 ## Deploying from GitHub
 

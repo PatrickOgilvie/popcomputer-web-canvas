@@ -57,7 +57,11 @@
 			"0 3 * * *"
 		]
 	},
+	// APP_URL is the app's address, the custom domain above: Better Auth's
+	// baseURL. A copy deployed elsewhere names its own, such as its
+	// workers.dev address.
 	"vars": {
-		"ENVIRONMENT": "production"
+		"ENVIRONMENT": "production",
+		"APP_URL": "https://canvas.web.popcomputer.com"
 	}
 }

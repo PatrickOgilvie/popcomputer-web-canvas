@@ -117,6 +117,15 @@ export function readDevSession(environment: PortlessProcessEnvironment): DevSess
   return { mode: 'portless', port: readPortlessPort(environment.PORT), appOrigin: url.origin }
 }
 
+/**
+ * The vars `bun run dev` gives the Worker itself, over wrangler.jsonc's and
+ * under `.dev.vars`: the address it serves the app at, as APP_URL, so Better
+ * Auth's baseURL is the dev server's, not the live app's.
+ */
+export function devServerVars(session: DevSession): Readonly<Record<string, string>> {
+  return { APP_URL: session.appOrigin }
+}
+
 /** Vite's arguments: the assigned port on loopback under portless, or the fixed one. */
 export function createViteArguments(session: DevSession): ReadonlyArray<string> {
   return session.mode === 'portless'
@@ -408,8 +417,9 @@ async function runDevelopmentServer(): Promise<number> {
       const watch = watchStartup()
       const vite = spawn('vite', [...createViteArguments(session)], {
         stdio: ['inherit', 'pipe', 'pipe'],
-        // Vite colours its output only for a terminal; the filter sits between them.
-        env: process.stdout.isTTY ? { ...process.env, FORCE_COLOR: '1' } : process.env,
+        // vite.config.ts gives the Worker these vars. Vite colours its output
+        // only for a terminal; the filter sits between them.
+        env: { ...process.env, ...devServerVars(session), ...(process.stdout.isTTY ? { FORCE_COLOR: '1' } : {}) },
       })
       pipeLines(vite.stdout, (line) => watch.see(line).flatMap(filter), (text) => process.stdout.write(text))
       pipeLines(vite.stderr, (line) => watch.see(line).flatMap(filter), (text) => process.stderr.write(text))
