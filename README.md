@@ -162,7 +162,10 @@ migrations to the local D1 database. It stops, saying what to add, if
 `.dev.vars` lacks a secret `src/env.ts` says the app needs, as
 [Vars and secrets](#vars-and-secrets) shows. Then it runs Vite, with Cloudflare's
 Vite plugin running the Worker inside it, so the pages and their scripts share
-one address, and an edit shows in the browser as you save it. Portless gives
+one address, and an edit shows in the browser as you save it: an edit to an
+action or to `src/routes.ts` runs the Worker's modules afresh, through
+`reloadWorkerModules()` from `@popcomputer/web/vite` in `vite.config.ts`, so
+no route registers twice. Portless gives
 that address the app's name instead of a port. If Node.js is missing, it says
 so and stops. Once Vite is ready it says which address to open. Stop the app
 with Ctrl-C, or, when it runs in another terminal or in the background, with
