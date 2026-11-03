@@ -1,5 +1,5 @@
-# Runs bun run check, the type check, the framework's lint rules and the
-# tests, on each push to main and each pull request.
+# Runs bun run check, the type check, the framework's lint rules, the tests
+# and the debt check, on each push to main and each pull request.
 name: Check
 
 on:

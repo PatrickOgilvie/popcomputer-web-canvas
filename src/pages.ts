@@ -16,9 +16,9 @@ export const RecentPaint = tableSchema(schema.paints).mapFields((fields) => ({
  */
 export const CanvasState = S.Struct({
   canvas: S.String,
-  lastPaintId: S.Number,
+  lastPaintId: S.Int,
   recent: S.Array(RecentPaint),
-  leaderboard: S.Array(S.Struct({ name: S.String, pixels: S.Number })),
+  leaderboard: S.Array(S.Struct({ name: S.String, pixels: S.Int })),
 })
 
 export const pages = {
@@ -26,8 +26,8 @@ export const pages = {
   Canvas: S.Struct({
     ...CanvasState.fields,
     /** The signed-in member's own count, and when they may paint next; null for a guest. */
-    you: S.NullOr(S.Struct({ painted: S.Number, nextPaintAt: S.NullOr(S.String) })),
+    you: S.NullOr(S.Struct({ painted: S.Int, nextPaintAt: S.NullOr(S.String) })),
   }),
   /** Every paint in order, as x, y, colour, x, y, colour, ... to play back. */
-  Replay: S.Struct({ paints: S.Array(S.Number), painters: S.Number }),
+  Replay: S.Struct({ paints: S.Array(S.Int), painters: S.Int }),
 }

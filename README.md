@@ -223,11 +223,31 @@ In a copy you cloned or made with GitHub's "Use this template", run
 bun run check
 ```
 
-`check` runs the type check, the framework's lint rules (`oxlint`) and the
-tests. The tests send requests through the app, signing in through the real
-registration form, each against a D1 database of its own in Miniflare, in
-process. On GitHub, `.github/workflows/check.yml` runs it for each push to
-`main` and each pull request.
+`check` runs the type check, the framework's lint rules (`oxlint`), the
+tests and the debt check. The type check runs the Effect language service,
+which `bun install` patches in, so an Effect that is neither yielded nor
+assigned fails it. The tests send requests through the app, as guests who
+join in through the real form or as members signed in as their session
+would sign them in, each against a D1 database of its own in Miniflare, in
+process. `test/requests.test.ts` sends generated requests to every route,
+as a visitor and as two members, and checks that none sees another's email,
+id or session, that no one changes another's paints or session, and that
+the canvas shows each paint that lands; `bun run fuzz` sends 5,000 of them
+from a new seed. `bun run mutate` plants small bugs in the `src/` lines a
+change touches and lists the ones no test catches, as the framework's
+`docs/mutation.md` explains. On GitHub, `.github/workflows/check.yml` runs
+`check` for each push to `main` and each pull request.
+
+### The fence for coding agents
+
+`bun install` sets `core.hooksPath` to `.githooks`, whose `pre-commit` runs
+the same checks before every commit; a repository already using another
+hooks directory keeps it. `.claude/settings.json` and `.cursor/hooks.json`
+send each command an agent runs through `popweb-fence hook`, which refuses
+one that skips the gate and asks you before one that deploys, touches the
+live database, sets a secret or pushes. `lint-debt.json` counts the
+comments that turn a rule off, and the check fails when the count grows.
+The framework's `docs/agent-fence.md` explains each.
 
 ## Changing the database
 
