@@ -14,7 +14,7 @@
  * given values here.
  */
 import { expect, test } from 'bun:test'
-import { inArray, sql } from 'drizzle-orm'
+import { count, inArray, sql } from 'drizzle-orm'
 import { Redacted } from 'effect'
 import {
   brokenPromises,
@@ -125,6 +125,18 @@ type PixelRow = { readonly x: number; readonly y: number; readonly color: number
 /** The paints a request added. */
 const added = (change: RowsChange<PaintRow>) => change.after.filter((row) => !change.before.some((was) => was.id === row.id))
 
+/** The pixels `x,y,color,userId;...` holds, row by row. */
+function pixelsOf(cells: string | null): PixelRow[] {
+  return (cells ?? '')
+    .split(';')
+    .filter((cell) => cell !== '')
+    .map((cell) => {
+      const [x = '', y = '', color = '', userId = ''] = cell.split(',')
+      return { x: Number(x), y: Number(y), color: Number(color), userId: userId === '' ? null : userId }
+    })
+    .sort((a, b) => a.y - b.y || a.x - b.x)
+}
+
 /** The canvas's pixels by where they are. */
 const byPlace = (rows: ReadonlyArray<PixelRow>) => new Map(rows.map((pixel) => [`${pixel.x},${pixel.y}`, pixel]))
 
@@ -161,24 +173,39 @@ function canvasFollowsPaints(sent: FuzzRequest<Person>, paintChange: RowsChange<
   return broken
 }
 
-async function send(sent: FuzzRequest<Person>): Promise<Refusal> {
+/**
+ * Each case's own address. Better Auth counts sign-ins in one map for the
+ * whole process, by address, and a request without one counts as
+ * 127.0.0.1's, so without it the visitors joining in here would use up the
+ * allowance of every other test that joins in without an address.
+ */
+let addresses = 0
+const nextAddress = () => {
+  addresses += 1
+  return `10.${(addresses >> 16) & 255}.${(addresses >> 8) & 255}.${addresses & 255}`
+}
+
+async function send(generated: FuzzRequest<Person>): Promise<Refusal> {
+  const sent = { ...generated, headers: { ...generated.headers, 'cf-connecting-ip': nextAddress() } }
   const bindings = await freshEnv()
 
   if (bindings.DB === undefined) throw new Error('freshEnv gives DB a database.')
 
   const db = createDb(bindings.DB)
+  const last = CANVAS_SIZE - 1
 
-  await db.insert(user).values([people.ada.user, people.grace.user])
-  await db.insert(session).values([people.ada.session, people.grace.session])
-  // Each has painted before, long enough ago that the cooldown has passed,
-  // so the feed and the replay name both.
-  await db.insert(paints).values([
-    { userId: canaries.ada.id, x: 0, y: 0, color: 5, createdAt: since },
-    { userId: canaries.grace.id, x: 63, y: 63, color: 12, createdAt: since },
+  await db.batch([
+    db.insert(user).values([people.ada.user, people.grace.user]),
+    db.insert(session).values([people.ada.session, people.grace.session]),
+    // Each has painted before, long enough ago that the cooldown has passed,
+    // so the feed and the replay name both.
+    db.insert(paints).values([
+      { userId: canaries.ada.id, x: 0, y: 0, color: 5, createdAt: since },
+      { userId: canaries.grace.id, x: last, y: last, color: 12, createdAt: since },
+    ]),
   ])
   // Every pixel of the canvas is one of theirs, in a checkerboard, so each
   // paint lands on a member's pixel, half the time another member's.
-  const last = CANVAS_SIZE - 1
   await db.run(sql`
     WITH RECURSIVE cell(x, y) AS (
       SELECT 0, 0
@@ -191,36 +218,44 @@ async function send(sent: FuzzRequest<Person>): Promise<Refusal> {
     FROM cell
   `)
 
-  const paintRows = () =>
-    db.select({ id: paints.id, userId: paints.userId, x: paints.x, y: paints.y, color: paints.color }).from(paints).orderBy(paints.id)
-  const pixelRows = () =>
-    db.select({ x: pixels.x, y: pixels.y, color: pixels.color, userId: pixels.userId }).from(pixels).orderBy(pixels.y, pixels.x)
-  // Joining in makes a guest and their session; the members' own are watched.
-  const sessionRows = () =>
-    db.select({ id: session.id, userId: session.userId, token: session.token, expiresAt: session.expiresAt })
-      .from(session)
-      .where(inArray(session.userId, seeded))
-      .orderBy(session.id)
-  const memberRows = () =>
-    db.select({ id: user.id, userId: user.id, name: user.name, email: user.email, isAnonymous: user.isAnonymous })
-      .from(user)
-      .where(inArray(user.id, seeded))
-      .orderBy(user.id)
-  const userCount = async () => (await db.select({ id: user.id }).from(user)).length
+  /**
+   * The rows the rules watch, read in one round trip: every paint, the
+   * canvas as one string (4,096 rows read apart would take longer than the
+   * request), the members' sessions and accounts (joining in makes a guest
+   * and their session), and how many users there are.
+   */
+  const watched = async () => {
+    const [paintRows, [canvas], sessionRows, memberRows, [users]] = await db.batch([
+      db.select({ id: paints.id, userId: paints.userId, x: paints.x, y: paints.y, color: paints.color }).from(paints).orderBy(paints.id),
+      db.select({ cells: sql<string | null>`group_concat(${pixels.x} || ',' || ${pixels.y} || ',' || ${pixels.color} || ',' || ifnull(${pixels.userId}, ''), ';')` }).from(pixels),
+      db.select({ id: session.id, userId: session.userId, token: session.token, expiresAt: session.expiresAt })
+        .from(session)
+        .where(inArray(session.userId, seeded))
+        .orderBy(session.id),
+      db.select({ id: user.id, userId: user.id, name: user.name, email: user.email, isAnonymous: user.isAnonymous })
+        .from(user)
+        .where(inArray(user.id, seeded))
+        .orderBy(user.id),
+      db.select({ users: count() }).from(user),
+    ])
 
-  const before = { paints: await paintRows(), pixels: await pixelRows(), sessions: await sessionRows(), members: await memberRows(), users: await userCount() }
+    return { paints: paintRows, pixels: pixelsOf(canvas?.cells ?? null), sessions: sessionRows, members: memberRows, users: users?.users ?? 0 }
+  }
+
+  const before = await watched()
   const env = sent.person === null ? bindings : testEnv(signedIn(signedInAs(sent.person)), bindings)
   const answer = await sendFuzzRequest(app, sent, env)
 
   // A request fetch refuses to make never reaches the Worker.
   if (answer === undefined) return undefined
 
-  const paintChange = { before: before.paints, after: await paintRows() }
-  const pixelChange = { before: before.pixels, after: await pixelRows() }
-  const sessionChange = { before: before.sessions, after: await sessionRows() }
-  const memberChange = { before: before.members, after: await memberRows() }
+  const after = await watched()
+  const paintChange = { before: before.paints, after: after.paints }
+  const pixelChange = { before: before.pixels, after: after.pixels }
+  const sessionChange = { before: before.sessions, after: after.sessions }
+  const memberChange = { before: before.members, after: after.members }
   // How many users there are, which only joining in changes.
-  const usersChange = { before: [before.users], after: [await userCount()] }
+  const usersChange = { before: [before.users], after: [after.users] }
 
   const landed = added(paintChange)
   const held = byPlace(pixelChange.before)
