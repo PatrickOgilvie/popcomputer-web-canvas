@@ -35,6 +35,9 @@ Each is declared once, and everything else derives from it:
 5. Write the component in `src/pages/`, typed `WebPage<'Name'>`, and add it
    to `components` in `src/main.tsx`; a page without one is a type error.
 6. Test it in `test/` through the app, as the tests there do.
+   `test/requests.test.ts` fuzzes every route with the forms its actions
+   declare; give a new path placeholder its values there, and seed and
+   watch a new table whose rows have an owner.
 
 The canvas pages are examples to copy and learn from: a public page that
 stays live by polling a JSON route with `ifChanged`, a form posted from a
