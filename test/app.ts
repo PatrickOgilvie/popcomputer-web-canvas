@@ -84,6 +84,19 @@ export async function member(env: Env, name: string, layer: Layer.Layer<never> =
   return testBrowser(app, testEnv(Layer.merge(signedIn({ user: row, session }), layer), env))
 }
 
+/**
+ * The same visitor in a browser that sends no Referer, as one whose privacy
+ * settings withhold it does, so a form it posts names no page it came from.
+ * It carries the browser's cookies, so a guest who joined in stays signed in.
+ */
+export function withoutReferer(browser: TestBrowser, env: Env): TestBrowser {
+  const other = testBrowser(app, env)
+
+  for (const [name, value] of browser.cookies) other.setCookie(name, value)
+
+  return other
+}
+
 /** A visitor who joins in from the canvas: a guest painter of their own. */
 export async function joinIn(env: Env): Promise<TestBrowser> {
   const browser = testBrowser(app, env)

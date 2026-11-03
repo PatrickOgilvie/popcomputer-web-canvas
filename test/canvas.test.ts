@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { readPage, testBrowser, type TestBrowser } from '@popcomputer/web/testing'
 import { CANVAS_SIZE, colorAt, COOLDOWN_SECONDS } from '../src/canvas'
 import { paths } from '../src/paths'
-import { app, asksToSignIn, clockedEnv, freshEnv, joinIn, member, paint, visit } from './app'
+import { app, asksToSignIn, clockedEnv, freshEnv, joinIn, member, paint, send, visit, withoutReferer } from './app'
 
 const canvasPage = async (browser: TestBrowser) => (await readPage(await browser.request(paths.canvas, visit), 'Canvas')).props
 
@@ -53,6 +53,23 @@ describe('painting', () => {
     const canvas = await readPage(await browser.follow(res), 'Canvas')
 
     expect(Object.keys(canvas.props.errors).sort()).toEqual(['color', 'x', 'y'])
+    expect(canvas.props.lastPaintId).toBe(0)
+  })
+
+  // The action's form(Paint, { page }) names the canvas. It is also `/`, where
+  // a form with neither a Referer nor a page goes, so this holds without it
+  // until the canvas moves.
+  test('a paint sent without a Referer goes back to the canvas, with its errors', async () => {
+    const env = await freshEnv()
+    const guest = await joinIn(env)
+    await guest.request(paths.canvas, visit)
+
+    const painting = withoutReferer(guest, env)
+    const res = await painting.request(paths.pixels, send('POST', { x: CANVAS_SIZE, y: 0, color: 3 }))
+    const canvas = await readPage(await painting.follow(res), 'Canvas')
+
+    expect(Object.keys(canvas.props.errors)).toEqual(['x'])
+    expect(canvas.props.auth.user?.isAnonymous).toBe(true)
     expect(canvas.props.lastPaintId).toBe(0)
   })
 

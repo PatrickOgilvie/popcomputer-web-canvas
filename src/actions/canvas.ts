@@ -7,11 +7,11 @@ import {
   currentUser,
   dbBatch,
   dbQuery,
+  form,
   ifChanged,
   json,
   redirect,
   render,
-  validateRequest,
 } from '@popcomputer/web/effect'
 import { COOLDOWN_SECONDS, encodeCanvas } from '../canvas'
 import { Paint } from '../forms'
@@ -100,12 +100,13 @@ export const canvasState = action(
 /**
  * Paints one pixel, as the signed-in member. The paint and the canvas change
  * in one batch, and the trigger that refuses a paint inside the cooldown
- * undoes both.
+ * undoes both. A form that fails validation goes back to the page it was
+ * sent from, with its errors; `page` names the canvas for a request whose
+ * Referer doesn't.
  */
-export const paint = action(
+export const paint = action(form(Paint, { page: paths.canvas }), (input) =>
   Effect.gen(function* () {
     const auth = yield* authorize()
-    const input = yield* validateRequest(Paint)
     const now = DateTime.toDateUtc(yield* DateTime.now)
 
     yield* dbBatch((db) => [

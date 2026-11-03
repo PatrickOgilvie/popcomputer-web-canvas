@@ -22,4 +22,4 @@ routes
 
 routes
   .provide(RequireAuthLayer)
-  .post(paths.pixels, paint, { form: paths.canvas })
+  .post(paths.pixels, paint)
